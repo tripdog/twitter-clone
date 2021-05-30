@@ -1,1 +1,25 @@
 html 
+  head
+    link(rel="stylesheet", href='https://cdn.jsdelivr.net/npm/@tailwindcss/ui@latest/dist/tailwind-ui.min.css')
+  body
+    div 
+     div 
+      h2 
+        | Sign in to Flipper 
+     div 
+      div
+       form(action='#' method='POST')
+         div 
+           label(for='username')
+             | Username 
+           div
+            input#username(type='text' name='username' required='required')
+         div 
+          label(for='password')
+            | Password 
+          div 
+           input#password(type='password')
+         div 
+          span 
+           button 
+             | Sign in
