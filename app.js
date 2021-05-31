@@ -15,7 +15,7 @@ app.use(
     store: new RedisStore({ client: client }),
     resave: true,
     cookie: {
-      maxAge: 36000000, //10 hours
+      maxAge: 3600000, //10 hours
       httpOnly: false,
       secure: false,
       sameSite: "lax",
