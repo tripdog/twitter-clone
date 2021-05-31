@@ -24,7 +24,7 @@ app.use(
     saveUninitialized: true,
   })
 );
-app.listen(3005, () => console.log("Server is ready Sir!"));
+
 app.set("view engine", "pug")
 app.set("views", path.join(__dirname, "views"))
 //Tell the program to watch the root folder for an index page and listen to port 3005
@@ -53,8 +53,7 @@ app.post('/', (req, res) => {
   console.log(req.body, username, password);
 
  //HGET is a redis command  that returns the value of a field in a hash
-  client.hget('users', username, (err, userid) => {
-    if (!userid) {
+  const handleSignup = (username, password) => {
       //user doesn't exist, so a signup process begins
       client.incr("userid", async (err, userid) => {
         client.hset("users", username, userid);
@@ -66,8 +65,9 @@ app.post('/', (req, res) => {
 
         saveSessionAndRenderDashboard(userid);
       });
-    } else {
+    }
       //here comes the login
+      const handleLogin = (userid, password) => {
       client.hget(`user:${userid}`, 'hash', async (err, hash) => {
         const result = await bcrypt.compare(password, hash); //returns true or false
         if (result) {
@@ -80,7 +80,13 @@ app.post('/', (req, res) => {
           return
         }
       })
+      }
+  client.hget('users', username, (err, userid) => {
+    if (!userid) {
+      handleSignup(username, password)
+    } else {
+      handleLogin(userid, password)
     }
   })
-  
-});
+  })
+  app.listen(3005, () => console.log("Server is ready Sir!"));
