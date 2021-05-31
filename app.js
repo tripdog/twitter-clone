@@ -30,12 +30,18 @@ app.set("views", path.join(__dirname, "views"))
 //Tell the program to watch the root folder for an index page and listen to port 3005
 app.get("/", (req, res) => {
   if (req.session.userid) {
-    res.render("dashboard")
+    res.render("dashboard");
   } else {
-    res.render("login")
+    res.render("login");
   }
 });
 
+app.post("/post", (req, res) => {
+  if (!req.session.userid) {
+    res.render("login");
+    return;
+  }
+});
 //Now create a post endpoint
 app.post('/', (req, res) => {
   const { username, password } = req.body
