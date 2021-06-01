@@ -150,7 +150,7 @@ app.post("/", (req, res) => {
     });
   };
 
-  console.log(req.body, username, password);
+  // console.log(req.body, username, password);
 
   //HGET is a redis command  that returns the value of a field in a hash
   const handleSignup = (username, password) => {
