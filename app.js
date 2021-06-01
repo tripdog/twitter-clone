@@ -6,6 +6,7 @@ const path = require("path")
 const redis = require("redis");
 const app = express();
 const client = redis.createClient();
+const { promisify } = require("util")
 const RedisStore = require("connect-redis")(session)
 //Now add some middleware to process the url encoded data
 app.use(express.urlencoded({ extended: true }));
@@ -27,22 +28,88 @@ app.use(
 
 app.set("view engine", "pug")
 app.set("views", path.join(__dirname, "views"))
+
+const ahget = promisify(client.hget).bind(client)
+const asmembers = promisify(client.smembers).bind(client)
+const ahkeys = promisify(client.hkeys).bind(client)
+const aincr = promisify(client.incr).bind(client)
+const alrange = promisify(client.lrange).bind(client)
+
+
 //Tell the program to watch the root folder for an index page and listen to port 3005
 app.get("/", (req, res) => {
   if (req.session.userid) {
-    res.render("dashboard");
+    client.hget(
+      `user:${req.session.userid}`,
+      "username",
+      (err, currentUserName) => {
+        client.smembers(`following:${currentUserName}`, (err, following) => {
+          client.hkeys("users", (err, users) => {
+            res.render("dashboard", {
+              users: users.filter(
+                (user) =>
+                  user !== currentUserName && following.indexOf(user) === -1
+              ),
+            });
+          });
+        });
+      }
+    );
   } else {
     res.render("login");
   }
 });
+
+
+
+app.get("/post", (req, res) => {
+  if (req.session.userid) {
+    res.render("post");
+  } else {
+    res.render("login");
+  }
+});
+
 
 app.post("/post", (req, res) => {
   if (!req.session.userid) {
     res.render("login");
     return;
   }
+
+  const { message } = req.body;
+
+  client.incr("postid", async (err, postid) => {
+    client.hmset(
+      `post:${postid}`,
+      "userid",
+      req.session.userid,
+      "message",
+      message,
+      "timestamp",
+      Date.now()
+    );
+    res.render("dashboard");
+  });
 });
-//Now create a post endpoint
+
+app.post("/follow", (req, res) => {
+  if (!req.session.userid) {
+    res.render("login")
+    return
+  }
+  const { username } = req.body
+  client.hget(
+    `user:${req.session.userid}`,
+    "username",
+    (err, currentUserName) => {
+      client.sadd(`following:${currentUserName}`, username)
+      client.sadd(`followers:${username}`, currentUserName)
+    }
+  )
+  res.redirect("/")
+})
+
 app.post('/', (req, res) => {
   const { username, password } = req.body
   if (!username || !password) {
@@ -51,11 +118,16 @@ app.post('/', (req, res) => {
     })
     return
   }
-  const saveSessionAndRenderDashboard = (userid) => {
-    req.session.userid = userid
-    req.session.save()
-    res.render('dashboard')
-  }
+const saveSessionAndRenderDashboard = (userid) => {
+  req.session.userid = userid;
+  req.session.save();
+  client.hkeys("users", (err, users) => {
+    res.render("dashboard", {
+      users,
+    });
+  });
+};
+
   console.log(req.body, username, password);
 
  //HGET is a redis command  that returns the value of a field in a hash
